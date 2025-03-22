@@ -1,4 +1,4 @@
-package open.ai.chatbot.config;
+package open.source.ai.chatbot.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

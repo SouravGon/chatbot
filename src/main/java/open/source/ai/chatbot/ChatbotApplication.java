@@ -1,4 +1,4 @@
-package open.ai.chatbot;
+package open.source.ai.chatbot;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

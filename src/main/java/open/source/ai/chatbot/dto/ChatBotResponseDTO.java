@@ -1,4 +1,4 @@
-package open.ai.chatbot.dto;
+package open.source.ai.chatbot.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

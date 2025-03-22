@@ -1,9 +1,11 @@
-package open.ai.chatbot.dto;
+package open.source.ai.chatbot.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -12,6 +14,5 @@ import lombok.Setter;
 public class ChatBotRequestDTO {
 
     private String model;
-    private String prompt;
-    private int max_tokens;
+    private List<Messages> messages;
 }
