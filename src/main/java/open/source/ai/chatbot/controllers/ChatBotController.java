@@ -6,7 +6,7 @@ import open.source.ai.chatbot.controllers.rest.BaseRestController;
 import open.source.ai.chatbot.dto.ChatBotRequestDTO;
 import open.source.ai.chatbot.dto.ChatBotResponseAO;
 import open.source.ai.chatbot.services.ChatBotService;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +22,6 @@ public class ChatBotController implements BaseRestController {
 
     @PostMapping("/chat")
     public ResponseEntity<ChatBotResponseAO> generateText(@Valid  @RequestBody ChatBotRequestDTO message) {
-        return new ResponseEntity<>(chatBotService.generateText(message), HttpStatusCode.valueOf(200));
+        return new ResponseEntity<>(chatBotService.generateText(message), HttpStatus.OK);
     }
 }
