@@ -1,5 +1,6 @@
 package open.source.ai.chatbot.controllers;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import open.source.ai.chatbot.controllers.rest.BaseRestController;
 import open.source.ai.chatbot.dto.ChatBotRequestDTO;
@@ -20,7 +21,7 @@ public class ChatBotController implements BaseRestController {
     private final ChatBotService chatBotService;
 
     @PostMapping("/chat")
-    public ResponseEntity<ChatBotResponseAO> generateText(@RequestBody ChatBotRequestDTO message) {
+    public ResponseEntity<ChatBotResponseAO> generateText(@Valid  @RequestBody ChatBotRequestDTO message) {
         return new ResponseEntity<>(chatBotService.generateText(message), HttpStatusCode.valueOf(200));
     }
 }

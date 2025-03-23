@@ -1,6 +1,7 @@
 package open.source.ai.chatbot.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import open.source.ai.chatbot.config.APIConfig;
 import open.source.ai.chatbot.dto.ChatBotRequestDTO;
 import open.source.ai.chatbot.dto.ChatBotResponseAO;
@@ -22,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatBotService {
@@ -33,6 +35,7 @@ public class ChatBotService {
     private final TogetherAIClientInterceptor togetherAIClientInterceptor;
 
     public ChatBotResponseAO generateText(ChatBotRequestDTO chatBotRequestDTO) {
+        log.info("Execution started in {}.", getClass());
         chatBotRequestDTO.setModel(apiConfig.getModel());
         chatBotRequestDTO.getMessages().get(0).setRole(Key.USER);
 
@@ -43,24 +46,34 @@ public class ChatBotService {
 
             HttpEntity<ChatBotRequestDTO> request = new HttpEntity<>(chatBotRequestDTO, headers);
             restTemplate.setInterceptors(List.of(togetherAIClientInterceptor));
+
+            log.debug("Before calling the RestTemplate. Request: {}", request.getBody().getMessages().get(0).getContent());
+
             response = restTemplate.exchange(
                     apiConfig.getClientUrl(Key.TOGETHER_AI),
                     HttpMethod.POST,
                     request,
                     ChatBotResponseDTO.class
             );
+
+            log.debug("After calling the RestTemplate. Response: {}", response);
         } catch (HttpClientErrorException ex) {
+            log.error("HttpClientErrorException: {}", ex.getMessage());
             throw new HttpClientErrorException(ex.getStatusCode(), ex.getMessage());
         } catch (ResourceAccessException ex) {
+            log.error("ResourceAccessException: {}", ex.getMessage());
             throw new ResourceAccessException(ex.getMessage());
         } catch (Exception ex) {
+            log.error("Exception: {}", ex.getMessage());
             throw new ChatBotException(ex.getMessage());
         }
 
         if (ObjectUtils.isEmpty(response.getBody()) || response.getBody().getChoices().isEmpty() || !response.getStatusCode().is2xxSuccessful()) {
+            log.debug("Response: {}", response);
             return responseGenerator.generateResponse(MESSAGE, Key.ERROR, String.valueOf(response.getStatusCode().value()));
         }
 
+        log.debug("Response: {}", response.getBody().getChoices().get(0).getMessage().getContent());
         return responseGenerator.generateResponse(response.getBody().getChoices().get(0).getMessage().getContent(),
                 Key.SUCCESS, String.valueOf(response.getStatusCode().value()));
     }
