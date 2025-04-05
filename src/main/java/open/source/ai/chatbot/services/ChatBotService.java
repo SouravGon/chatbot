@@ -6,6 +6,8 @@ import open.source.ai.chatbot.config.APIConfig;
 import open.source.ai.chatbot.dto.ChatBotRequestDTO;
 import open.source.ai.chatbot.dto.ChatBotResponseAO;
 import open.source.ai.chatbot.dto.ChatBotResponseDTO;
+import open.source.ai.chatbot.dto.Choice;
+import open.source.ai.chatbot.dto.Messages;
 import open.source.ai.chatbot.exceptions.ChatBotException;
 import open.source.ai.chatbot.interceptors.TogetherAIClientInterceptor;
 import open.source.ai.chatbot.util.APIResponseGenerator;
@@ -13,8 +15,10 @@ import open.source.ai.chatbot.util.Key;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.HttpClientErrorException;
@@ -22,24 +26,24 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatBotService {
 
-    public static final String MESSAGE = "Sorry, Try again later.";
     private final APIConfig apiConfig;
     private final RestTemplate restTemplate;
     private final APIResponseGenerator responseGenerator;
     private final TogetherAIClientInterceptor togetherAIClientInterceptor;
 
-    public ChatBotResponseAO generateText(ChatBotRequestDTO chatBotRequestDTO) {
+    @Async
+    public CompletableFuture<ChatBotResponseAO> generateText(ChatBotRequestDTO chatBotRequestDTO) {
         log.info("Execution started in {}.", getClass());
-        chatBotRequestDTO.setModel(apiConfig.getModel());
-        chatBotRequestDTO.getMessages().get(0).setRole(Key.USER);
 
-        ResponseEntity<ChatBotResponseDTO> response;
+        String response;
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -49,32 +53,43 @@ public class ChatBotService {
 
             log.debug("Before calling the RestTemplate. Request: {}", request.getBody().getMessages().get(0).getContent());
 
-            response = restTemplate.exchange(
-                    apiConfig.getClientUrl(Key.TOGETHER_AI),
-                    HttpMethod.POST,
-                    request,
-                    ChatBotResponseDTO.class
-            );
+            response = getResponse(request);
 
             log.debug("After calling the RestTemplate. Response: {}", response);
         } catch (HttpClientErrorException ex) {
             log.error("HttpClientErrorException: {}", ex.getMessage());
-            throw new HttpClientErrorException(ex.getStatusCode(), ex.getMessage());
+            throw new HttpClientErrorException(ex.getStatusCode(), Key.MESSAGE);
         } catch (ResourceAccessException ex) {
             log.error("ResourceAccessException: {}", ex.getMessage());
-            throw new ResourceAccessException(ex.getMessage());
+            throw new ResourceAccessException(Key.MESSAGE);
         } catch (Exception ex) {
             log.error("Exception: {}", ex.getMessage());
-            throw new ChatBotException(ex.getMessage());
+            throw new ChatBotException(Key.MESSAGE);
         }
 
-        if (ObjectUtils.isEmpty(response.getBody()) || response.getBody().getChoices().isEmpty() || !response.getStatusCode().is2xxSuccessful()) {
-            log.debug("Response: {}", response);
-            return responseGenerator.generateResponse(MESSAGE, Key.ERROR, String.valueOf(response.getStatusCode().value()));
+        if (null == response || ObjectUtils.isEmpty(response)) {
+            log.debug("Response is null.");
+            throw new ChatBotException(Key.MESSAGE);
         }
 
-        log.debug("Response: {}", response.getBody().getChoices().get(0).getMessage().getContent());
-        return responseGenerator.generateResponse(response.getBody().getChoices().get(0).getMessage().getContent(),
-                Key.SUCCESS, String.valueOf(response.getStatusCode().value()));
+        log.debug("Response: {}", response);
+        return CompletableFuture.completedFuture(responseGenerator.generateResponse(response.replaceAll("(?s)<think>.*?</think>\n\n", ""),
+                Key.SUCCESS, String.valueOf(HttpStatus.OK.value())));
+    }
+
+    private String getResponse(HttpEntity<ChatBotRequestDTO> request) {
+        ResponseEntity<ChatBotResponseDTO> response = restTemplate.exchange(
+                apiConfig.getClientUrl(Key.TOGETHER_AI),
+                HttpMethod.POST,
+                request,
+                ChatBotResponseDTO.class
+        );
+        return Optional.ofNullable(response.getBody())
+                .map(ChatBotResponseDTO::getChoices)
+                .filter(choices -> !ObjectUtils.isEmpty(choices))
+                .stream().findFirst().orElseThrow(() -> new ChatBotException("No choices available"))
+                .stream().map(Choice::getMessage)
+                .map(Messages::getContent).findFirst()
+                .orElse(null);
     }
 }
