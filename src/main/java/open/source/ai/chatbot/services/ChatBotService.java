@@ -43,7 +43,7 @@ public class ChatBotService {
     public CompletableFuture<ChatBotResponseAO> generateText(ChatBotRequestDTO chatBotRequestDTO) {
         log.info("Execution started in {}.", getClass());
 
-        String response = null;
+        String response;
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -67,7 +67,7 @@ public class ChatBotService {
             throw new ChatBotException(Key.MESSAGE);
         }
 
-        if (null == response) {
+        if (null == response || ObjectUtils.isEmpty(response)) {
             log.debug("Response is null.");
             throw new ChatBotException(Key.MESSAGE);
         }
@@ -87,7 +87,7 @@ public class ChatBotService {
         return Optional.ofNullable(response.getBody())
                 .map(ChatBotResponseDTO::getChoices)
                 .filter(choices -> !ObjectUtils.isEmpty(choices))
-                .stream().findFirst().get()
+                .stream().findFirst().orElseThrow(() -> new ChatBotException("No choices available"))
                 .stream().map(Choice::getMessage)
                 .map(Messages::getContent).findFirst()
                 .orElse(null);
