@@ -14,6 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ChatBotRequestDTO {
 
+    @NotEmpty
     private String model;
     @NotEmpty
     private List<Messages> messages;

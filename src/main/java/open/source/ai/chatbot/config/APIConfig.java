@@ -23,8 +23,6 @@ public class APIConfig {
     private String apiKey;
     @Value("${chatbot.api.url}")
     private String apiUrl;
-    @Value("${chatbot.api.model}")
-    private String model;
     private final Map<String, String> clientUrls = new HashMap<>();
     private String togetherAIBasicAuthKey;
 
